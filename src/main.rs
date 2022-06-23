@@ -13,8 +13,7 @@ fn main() {
     game.print_game();
     loop {
         let mut input = String::new();
-        let big_board_index: u8;
-        if game.current_move_can_be_put_anywhere() {
+        let big_board_index = if game.current_move_can_be_put_anywhere() {
             println!(
                 "[{}] You can put your tile on any board",
                 game.get_next_player().get_letter()
@@ -35,21 +34,21 @@ fn main() {
                 continue;
             }
 
-            big_board_index = match input_trimmed.parse::<u8>() {
+            match input_trimmed.parse::<u8>() {
                 Ok(val) => val,
                 Err(_) => {
                     println!("[!] Input a number");
                     continue;
                 }
-            };
+            }
         } else {
             println!(
                 "[{}] You have to put your tile on board #{}",
                 game.get_next_player().get_letter(),
                 game.last_sent_board_index().unwrap()
             ); //shouldnt panic as the None variant is ruled out in !game.current_move_can_be_put_anywhere()
-            big_board_index = game.last_sent_board_index().unwrap();
-        }
+            game.last_sent_board_index().unwrap()
+        };
 
         print!(
             "[{}] Small board index: ",
@@ -77,12 +76,14 @@ fn main() {
         };
 
         let game_status = game.make_move(big_board_index, small_board_index);
-        if game_status.is_err() {
-            if matches!(
-                game_status.unwrap_err(),
-                BoardError::MoveAtAlreadyFilledTile
-            ) {
-                println!("[!] That tile was already taken6")
+        if let Err(error) = game_status {
+            match error{
+                BoardError::MoveAtAlreadyFilledTile => println!("[!] That tile was already taken"),
+                BoardError::MoveAtNotSentBoard => println!("[!] You can not make a move at that board as you weren't sent there"),
+                BoardError::MoveAtAlreadyFinishedBoard => println!("[!] You can not make a move at that board as it has been completed"),
+            }
+                {
+                println!("[!] That tile was already taken")
             }
             continue;
         }

@@ -186,15 +186,11 @@ impl SmallBoard {
 
         self.tiles[usize::from(position)].mark = player.to_mark();
         self.check_finish_and_record();
-        return Ok(&self.won_by);
+        Ok(&self.won_by)
     }
 
     fn check_draw(&self) -> bool {
-        if self.filled_tiles == 9 {
-            return true;
-        } else {
-            return false;
-        }
+        self.filled_tiles == 9
     }
 
     const fn small_horizontal_seperator() -> &'static str{
@@ -233,38 +229,38 @@ impl SmallBoard {
         {
             return WonByPlayer::O;
         }
-        return WonByPlayer::HasntFinished;
+        WonByPlayer::HasntFinished
     }
 
     fn get_current_finish_status(&self) -> WonByPlayer {
         if self.check_draw() {
             return WonByPlayer::Tie;
         }
-        return self.check_win();
+        self.check_win()
     }
 
     fn check_finish_and_record(&mut self) -> bool {
         match self.get_current_finish_status() {
             WonByPlayer::X => {
                 self.won_by = WonByPlayer::X;
-                return true;
+                true
             }
             WonByPlayer::O => {
                 self.won_by = WonByPlayer::O;
-                return true;
+                true
             }
             WonByPlayer::Tie => {
                 self.won_by = WonByPlayer::Tie;
-                return true;
+                true
             }
-            WonByPlayer::HasntFinished => return false,
+            WonByPlayer::HasntFinished => false,
         }
     }
 
 
 
     fn is_finished(&self) -> bool{
-        return match self.won_by{
+        match self.won_by{
             WonByPlayer::X => true,
             WonByPlayer::O => true,
             WonByPlayer::Tie => true,
@@ -334,15 +330,11 @@ impl BigBoard {
         
         self.last_sent_board_index = Some(tile_pos);
         
-        return Ok(self.get_current_finish_status())
+        Ok(self.get_current_finish_status())
     }
 
     fn check_draw(&self) -> bool {
-        if self.filled_boards == 9 {
-            return true;
-        } else {
-            return false;
-        }
+        self.filled_boards == 9
     }
 
     fn check_win(&self) -> WonByPlayer {
@@ -373,14 +365,14 @@ impl BigBoard {
         {
             return WonByPlayer::O;
         }
-        return WonByPlayer::HasntFinished;
+        WonByPlayer::HasntFinished
     }
 
     fn get_current_finish_status(&self) -> WonByPlayer {
         if self.check_draw() {
             return WonByPlayer::Tie;
         }
-        return self.check_win();
+        self.check_win()
     }
 
     const fn horizontal_seperator() -> &'static str{
@@ -478,6 +470,6 @@ impl Game {
         let successful=self.game.make_move(small_board_pos, tile_pos, &self.next_player);
         if successful.is_ok(){self.switch_next_player();}
 
-        return successful;
+        successful
     }
 }
