@@ -82,9 +82,6 @@ fn main() {
                 BoardError::MoveAtNotSentBoard => println!("[!] You can not make a move at that board as you weren't sent there"),
                 BoardError::MoveAtAlreadyFinishedBoard => println!("[!] You can not make a move at that board as it has been completed"),
             }
-                {
-                println!("[!] That tile was already taken")
-            }
             continue;
         }
 

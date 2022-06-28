@@ -2,10 +2,21 @@ use std::fmt::{Display, Debug};
 
 #[derive(PartialEq)]
 enum Mark {
-    Empty,
-    X,
-    O,
+    Empty = 0,
+    X = 1,
+    O = 2,
 }
+
+/* impl Mark{
+    fn from_u32(value: u32) -> Self {
+        match value {
+            0 => Self::Empty,
+            1 => Self::X,
+            2 => Self::O,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+} */
 
 pub enum BoardError {
     MoveAtNotSentBoard,
@@ -23,10 +34,10 @@ impl Debug for BoardError{
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum Player {
-    X,
-    O,
+    X = 1,
+    O = 2,
 }
 impl Player {
     const fn to_mark(&self) -> Mark {
@@ -75,12 +86,39 @@ impl Tile {
             Mark::O => "O",
         }
     }
+    fn from_u32(value: u32) -> Self {
+        match value {
+            0 => Self {mark: Mark::Empty},
+            1 => Self {mark: Mark::X},
+            2 => Self {mark: Mark::O},
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+}
+
+/* Empty/X/O is 00,01,10 so we need 2*9=27 bits for the entire small board */
+struct NineTiles{
+    tiles: u32
+}
+
+impl NineTiles{
+    const fn new() -> Self{
+        Self{
+            tiles: 0
+        }
+    }
+
+    fn put_tile(&mut self, position: u8, player: Player){
+        self.tiles+=2u32.pow(2*position as u32)*(player as u32);
+    }
+
+    fn get_tile(&self, position: u8) -> Tile{
+        Tile::from_u32((self.tiles/4u32.pow(position as u32))%4)
+    }
 }
 
 struct SmallBoard {
-    tiles: [Tile; 9],
-    x_bits: u16,
-    o_bits: u16,
+    tiles: NineTiles,
     filled_tiles: u8,
     won_by: WonByPlayer,
 }
@@ -100,14 +138,14 @@ impl Display for SmallBoard {
               \x20{} | {} | {} \n\
                  ---+---+---\n\
               \x20{} | {} | {} ",
-                self.tiles[0],
-                self.tiles[1],
-                self.tiles[2],
-                self.tiles[3],
-                self.tiles[4],
-                self.tiles[5],
-                self.tiles[6],
-                self.tiles[7],
+                self.tiles.get_tile(0),
+                self.tiles.get_tile(1),
+                self.tiles.get_tile(2),
+                self.tiles.get_tile(3),
+                self.tiles.get_tile(4),
+                self.tiles.get_tile(5),
+                self.tiles.get_tile(6),
+                self.tiles.get_tile(7),
                 matches!(self.won_by, WonByPlayer::HasntFinished)
             ),
         }
@@ -125,13 +163,10 @@ impl SmallBoard {
     } */
     
     const fn new() -> Self {
-        const INIT: Tile = Tile::new();
         Self {
-            tiles: [INIT; 9],
+            tiles: NineTiles::new(),
             filled_tiles: 0,
             won_by: WonByPlayer::HasntFinished,
-            x_bits: 0,
-            o_bits: 0,
         }
     }
     
@@ -163,28 +198,25 @@ impl SmallBoard {
             WonByPlayer::Tie => SmallBoard::TIE_BOARD_SHAPE[usize::from(row)].to_owned(),
             WonByPlayer::HasntFinished =>format!(
                 " {} | {} | {} ",
-                self.tiles[3*usize::from(row)],
-                self.tiles[3*usize::from(row) + 1],
-                self.tiles[3*usize::from(row) + 2]
+                self.tiles.get_tile(3*row),
+                self.tiles.get_tile(3*row + 1),
+                self.tiles.get_tile(3*row + 2)
             ),
         }
 
     }
-    fn place_tile_and_record_finish(&mut self, position: u8, player: &Player) -> Result<&WonByPlayer, BoardError> {
-        if self.tiles[usize::from(position)].mark != Mark::Empty {
+    fn place_tile_and_record_finish(&mut self, position: u8, player: Player) -> Result<&WonByPlayer, BoardError> {
+        if self.tiles.get_tile(position).mark != Mark::Empty {
             return Err(BoardError::MoveAtAlreadyFilledTile); // Move at already filled tile
         }
 
         //xoring for presumably better speed
         //(cant unset a bit as we check above for bit not being set)
-        match player {
-            Player::X => self.x_bits ^= 1 << position,
-            Player::O => self.o_bits ^= 1 << position,
-        }
+        self.tiles.put_tile(position, player);
 
         self.filled_tiles+=1;
 
-        self.tiles[usize::from(position)].mark = player.to_mark();
+        self.tiles.get_tile(position).mark = player.to_mark();
         self.check_finish_and_record();
         Ok(&self.won_by)
     }
@@ -208,24 +240,24 @@ impl SmallBoard {
 
         // on that now, should probably get git to work by now
 
-        if self.x_bits & 0b001001001 == 0b001001001 // vertical
-            || self.x_bits & 0b010010010 == 0b010010010
-            || self.x_bits & 0b100100100 == 0b100100100
-            || self.x_bits & 0b000000111 == 0b000000111 //horizontal
-            || self.x_bits & 0b000111000 == 0b000111000
-            || self.x_bits & 0b111000000 == 0b111000000
-            || self.x_bits & 0b100010001 == 0b100010001 //diagonal
-            || self.x_bits & 0b001010100 == 0b001010100
+        if self.tiles.tiles & 0b00_00_01_00_00_01_00_00_01 == 0b00_00_01_00_00_01_00_00_01 // vertical
+            || self.tiles.tiles & 0b00_01_00_00_01_00_00_01_00 == 0b00_01_00_00_01_00_00_01_00
+            || self.tiles.tiles & 0b01_00_00_01_00_00_01_00_00 == 0b01_00_00_01_00_00_01_00_00
+            || self.tiles.tiles & 0b00_00_00_00_00_00_01_01_01 == 0b00_00_00_00_00_00_01_01_01 //horizontal
+            || self.tiles.tiles & 0b00_00_00_01_01_01_00_00_00 == 0b00_00_00_01_01_01_00_00_00
+            || self.tiles.tiles & 0b01_01_01_00_00_00_00_00_00 == 0b01_01_01_00_00_00_00_00_00
+            || self.tiles.tiles & 0b01_00_00_00_01_00_00_00_01 == 0b01_00_00_00_01_00_00_00_01 //diagonal
+            || self.tiles.tiles & 0b00_00_01_00_01_00_01_00_00 == 0b00_00_01_00_01_00_01_00_00
         {
             return WonByPlayer::X;
-        } else if self.o_bits & 0b001001001 == 0b001001001 //vertical
-            || self.o_bits & 0b010010010 == 0b010010010
-            || self.o_bits & 0b100100100 == 0b100100100
-            || self.o_bits & 0b000000111 == 0b000000111 //horizontal
-            || self.o_bits & 0b000111000 == 0b000111000
-            || self.o_bits & 0b111000000 == 0b111000000
-            || self.o_bits & 0b100010001 == 0b100010001 //diagonal
-            || self.o_bits & 0b001010100 == 0b001010100
+        } else if self.tiles.tiles & 0b00_00_10_00_00_10_00_00_10 == 0b00_00_10_00_00_10_00_00_10 // vertical
+        || self.tiles.tiles & 0b00_10_00_00_10_00_00_10_00 == 0b00_10_00_00_10_00_00_10_00
+        || self.tiles.tiles & 0b10_00_00_10_00_00_10_00_00 == 0b10_00_00_10_00_00_10_00_00
+        || self.tiles.tiles & 0b00_00_00_00_00_00_10_10_10 == 0b00_00_00_00_00_00_10_10_10 //horizontal
+        || self.tiles.tiles & 0b00_00_00_10_10_10_00_00_00 == 0b00_00_00_10_10_10_00_00_00
+        || self.tiles.tiles & 0b10_10_10_00_00_00_00_00_00 == 0b10_10_10_00_00_00_00_00_00
+        || self.tiles.tiles & 0b10_00_00_00_10_00_00_00_10 == 0b10_00_00_00_10_00_00_00_10 //diagonal
+        || self.tiles.tiles & 0b00_00_10_00_10_00_10_00_00 == 0b00_00_10_00_10_00_10_00_00
         {
             return WonByPlayer::O;
         }
@@ -307,7 +339,7 @@ impl BigBoard {
         self.last_sent_board_index.is_none() || self.boards[usize::from(self.last_sent_board_index.unwrap())].is_finished()
         
     }
-    fn make_move(&mut self, small_board_pos: u8, tile_pos: u8, player: &Player) -> Result<WonByPlayer, BoardError> {
+    fn make_move(&mut self, small_board_pos: u8, tile_pos: u8, player: Player) -> Result<WonByPlayer, BoardError> {
         if !self.current_move_can_be_put_anywhere() && small_board_pos!=self.last_sent_board_index.unwrap(){
             return Err(BoardError::MoveAtNotSentBoard) //illegal board
         }
@@ -467,7 +499,7 @@ impl Game {
     }
 
     pub fn make_move(&mut self, small_board_pos: u8, tile_pos: u8) -> Result<WonByPlayer, BoardError> {
-        let successful=self.game.make_move(small_board_pos, tile_pos, &self.next_player);
+        let successful=self.game.make_move(small_board_pos, tile_pos, self.next_player);
         if successful.is_ok(){self.switch_next_player();}
 
         successful
