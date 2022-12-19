@@ -96,7 +96,7 @@ impl Tile {
     }
 }
 
-/* Empty/X/O is 00,01,10 so we need 2*9=27 bits for the entire small board */
+/* Empty/X/O is 00,01,10 so we need (2*9=18) 18<=32 bits for the entire small board */
 struct NineTiles{
     tiles: u32
 }
