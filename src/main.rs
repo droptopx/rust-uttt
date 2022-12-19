@@ -5,7 +5,7 @@ mod uttt_game;
 
 /* This code needs to be refactored hard, maybe move main loop into another file or perhaps in uttt_game.rs?
  * Actually, I might need to redo all of this project because its way too mangled up
- * 
+ *
  * */
 fn main() {
     let mut game = uttt_game::Game::new();
@@ -34,18 +34,25 @@ fn main() {
                 continue;
             }
 
-            match input_trimmed.parse::<u8>() {
+            let result = match input_trimmed.parse::<u8>() {
                 Ok(val) => val,
                 Err(_) => {
                     println!("[!] Input a number");
                     continue;
                 }
+            };
+
+            if !(1 <= result && result <= 9) {
+                println!("[!] Input a number between 1-9 (inclusive)");
+                continue;
             }
+
+            result - 1
         } else {
             println!(
                 "[{}] You have to put your tile on board #{}",
                 game.get_next_player().get_letter(),
-                game.last_sent_board_index().unwrap()
+                game.last_sent_board_index().unwrap() + 1
             ); //shouldnt panic as the None variant is ruled out in !game.current_move_can_be_put_anywhere()
             game.last_sent_board_index().unwrap()
         };
@@ -75,17 +82,27 @@ fn main() {
             }
         };
 
+        if !(1 <= small_board_index && small_board_index <= 9) {
+            println!("[!] Input a number between 1-9 (inclusive)");
+            continue;
+        }
+
+        let small_board_index = small_board_index - 1;
+
         let game_status = game.make_move(big_board_index, small_board_index);
         if let Err(error) = game_status {
-            match error{
+            match error {
                 BoardError::MoveAtAlreadyFilledTile => println!("[!] That tile was already taken"),
-                BoardError::MoveAtNotSentBoard => println!("[!] You can not make a move at that board as you weren't sent there"),
-                BoardError::MoveAtAlreadyFinishedBoard => println!("[!] You can not make a move at that board as it has been completed"),
+                BoardError::MoveAtNotSentBoard => {
+                    println!("[!] You can not make a move at that board as you weren't sent there")
+                }
+                BoardError::MoveAtAlreadyFinishedBoard => {
+                    println!("[!] You can not make a move at that board as it has been completed")
+                }
             }
             continue;
         }
 
-        
         print!("\x1B[2J\x1B[1;1H"); //clear screen
         game.print_game();
         match game_status.unwrap() {

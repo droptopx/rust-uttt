@@ -76,9 +76,9 @@ impl Display for Tile {
 }
 
 impl Tile {
-    const fn new() -> Self {
+    /*const fn new() -> Self {
         Tile { mark: Mark::Empty }
-    }
+    }*/
     const fn get_letter(&self) -> &str {
         match self.mark {
             Mark::Empty => " ",
